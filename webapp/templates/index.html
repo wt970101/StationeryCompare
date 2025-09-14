@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="container mt-4">
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <input type="text" class="form-control" id="keyword" placeholder="輸入商品名稱">
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-primary" id="btnSearch">搜尋</button>
+        </div>
+    </div>
+    <div id="listData" class="row"></div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$('#btnSearch').on('click', function(){
+    var kw = $('#keyword').val();
+    fetchCompare(kw);
+});
+
+function fetchCompare(keyword){
+    $('#listData').html('<p>載入中...</p>');
+    $.ajax({
+        type: 'GET',
+        url: '/scraper/compare_list/' + keyword
+    })
+    .done(function(data){
+        var items = [];
+        $.each(data.jsonData, function(idx, product){
+            var card = '<div class="col-md-4 mb-3"><div class="card p-2">';
+            card += '<h5>'+product.name+'</h5><ul>';
+            var min_price = Math.min.apply(Math, product.items.map(i => i.price_unit));
+            $.each(product.items, function(i, it){
+                var style = it.price_unit == min_price ? 'font-weight:bold;color:red;' : '';
+                card += '<li style="'+style+'">'+it.store+': '+it.price_unit+' / 支</li>';
+            });
+            card += '</ul></div></div>';
+            items.push(card);
+        });
+        $('#listData').html(items.join(''));
+    })
+    .fail(function(){
+        $('#listData').html('<p>抓取失敗</p>');
+    });
+}
+</script>
+{% endblock %}

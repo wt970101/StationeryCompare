@@ -1,27 +1,20 @@
-# 從 flask 套件中匯入 Flask 網頁應用程式類別
-from datetime import date, timedelta
-from flask import Flask, render_template, send_from_directory
-from flask import session, request, redirect, url_for, current_app
-from functools import wraps
-from webapp.amaindb import MAINDB
-from webapp.modules import utils
-from webapp.modules.locals import *
-import json
-import os
-import time
+from flask import Flask, render_template, request, jsonify
+from webapp.modules import sta_compare
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = SECRET_KEY
-print(SECRET_KEY)
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)
-cyear = date.today().year
-nowid = lambda: utils.get_nowid()
-dtnow = lambda: utils.get_now()
-# 以資料庫類別建構函式 MAINDB() 建立物件 mainDB
-mainDB = MAINDB()
-# 專案資料夾
-print('app.root_path:', app.root_path)
 
-@app.route('/')
+@app.route('/', methods=['GET'])
 def index():
-    return "<h1>Hello, World!</h1>"
+    return render_template('index.html')
+
+@app.route('/scraper/compare_list/<keyword>', methods=['GET'])
+def compare_list(keyword):
+    data = sta_compare.get_compare_data(keyword)
+    # 將資料整理成前端使用的格式
+    jsonData = []
+    for pname, items in data.items():
+        jsonData.append({
+            'name': pname,
+            'items': [{'store': i['store'], 'price_unit': i['price_unit']} for i in items]
+        })
+    return jsonify({'jsonData': jsonData})
