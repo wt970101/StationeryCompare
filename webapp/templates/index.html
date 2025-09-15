@@ -1,49 +1,90 @@
 {% extends 'base.html' %}
+{%- set page_title = '商品比價平台' -%}
+
 {% block content %}
-<section class="container mt-4">
-    <div class="row mb-3">
-        <div class="col-md-6">
-            <input type="text" class="form-control" id="keyword" placeholder="輸入商品名稱">
-        </div>
-        <div class="col-md-2">
-            <button class="btn btn-primary" id="btnSearch">搜尋</button>
-        </div>
+<!-- Hero Banner -->
+<div class="hero">
+  <h1>商品比價平台</h1>
+  <p>輸入商品名稱，快速比較各平台價格</p>
+  <div class="row justify-content-center">
+    <div class="col-lg-6 d-flex">
+      <input type="text" class="form-control me-2" id="query" placeholder="例如：原子筆">
+      <button class="btn btn-warning" id="btnSearch">
+        搜尋
+        <span class="spinner-border spinner-border-sm d-none"></span>
+      </button>
     </div>
-    <div id="listData" class="row"></div>
-</section>
+  </div>
+</div>
+
+<!-- 搜尋結果 -->
+<div id="results" class="mt-4">
+  <!-- 動態插入商品卡片 -->
+</div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script>
-$('#btnSearch').on('click', function(){
-    var kw = $('#keyword').val();
-    fetchCompare(kw);
-});
+$(function() {
+  $('#btnSearch').on('click', function() {
+    const q = $('#query').val();
+    if (!q) return alert("請輸入商品名稱！");
+    $('#btnSearch > span').removeClass('d-none'); // 顯示 loading
 
-function fetchCompare(keyword){
-    $('#listData').html('<p>載入中...</p>');
-    $.ajax({
-        type: 'GET',
-        url: '/scraper/compare_list/' + keyword
-    })
-    .done(function(data){
-        var items = [];
-        $.each(data.jsonData, function(idx, product){
-            var card = '<div class="col-md-4 mb-3"><div class="card p-2">';
-            card += '<h5>'+product.name+'</h5><ul>';
-            var min_price = Math.min.apply(Math, product.items.map(i => i.price_unit));
-            $.each(product.items, function(i, it){
-                var style = it.price_unit == min_price ? 'font-weight:bold;color:red;' : '';
-                card += '<li style="'+style+'">'+it.store+': '+it.price_unit+' / 支</li>';
-            });
-            card += '</ul></div></div>';
-            items.push(card);
+    $.getJSON('/search', { query: q })
+      .done(function(data) {
+        if (!Array.isArray(data)) {
+          $('#results').html('<div class="alert alert-danger">伺服器回傳資料格式錯誤</div>');
+          return;
+        }
+        let html = '<div class="row">';
+        data.forEach(item => {
+          // 假設每個商品只有一個價格（之後可擴充多平台）
+          const priceInfo = item.prices && item.prices.length > 0 ? item.prices[0] : null;
+          const site = priceInfo ? priceInfo.site : "無資料";
+          const price = priceInfo ? priceInfo.price : "-";
+          const url = priceInfo ? priceInfo.url : "#";
+
+          html += `
+          <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+              <img src="https://via.placeholder.com/300x200?text=${encodeURIComponent(item.name)}"
+                   class="card-img-top" alt="${item.name}">
+              <div class="card-body">
+                <h5 class="card-title">${item.name}</h5>
+                <p class="card-text"><strong>${price} 元</strong></p>
+                <p class="text-muted">平台：${site}</p>
+                <a href="${url}" class="btn btn-primary btn-sm" target="_blank">前往購買</a>
+                <button class="btn btn-outline-danger btn-sm btn-fav" data-name="${item.name}">♥ 加入最愛</button>
+              </div>
+            </div>
+          </div>`;
         });
-        $('#listData').html(items.join(''));
-    })
-    .fail(function(){
-        $('#listData').html('<p>抓取失敗</p>');
-    });
-}
+        html += '</div>';
+        $('#results').html(html);
+      })
+      .fail(function(jqXHR) {
+        console.error('Ajax 錯誤', jqXHR.status, jqXHR.responseText);
+        $('#results').html('<div class="alert alert-danger">伺服器錯誤</div>');
+      })
+      .always(function() {
+        $('#btnSearch > span').addClass('d-none'); // 隱藏 loading
+      });
+  });
+
+  // 我的最愛 (LocalStorage 暫存)
+  $(document).on('click', '.btn-fav', function() {
+    const name = $(this).data('name');
+    let favs = JSON.parse(localStorage.getItem('favorites') || "[]");
+    if (!favs.includes(name)) {
+      favs.push(name);
+      localStorage.setItem('favorites', JSON.stringify(favs));
+      alert(name + " 已加入我的最愛！");
+    } else {
+      alert(name + " 已經在最愛清單中了");
+    }
+  });
+});
 </script>
 {% endblock %}

@@ -1,0 +1,11 @@
+body {
+    font-family: "Microsoft JhengHei", sans-serif;
+}
+
+.card-title {
+    color: #0066cc;
+}
+
+.card {
+    border-radius: 12px;
+}

@@ -1,20 +1,17 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from webapp.modules import sta_compare
 
 app = Flask(__name__)
+app.run(debug=True)
 
-@app.route('/', methods=['GET'])
+@app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', page_title="比價平台")
 
-@app.route('/scraper/compare_list/<keyword>', methods=['GET'])
-def compare_list(keyword):
-    data = sta_compare.get_compare_data(keyword)
-    # 將資料整理成前端使用的格式
-    jsonData = []
-    for pname, items in data.items():
-        jsonData.append({
-            'name': pname,
-            'items': [{'store': i['store'], 'price_unit': i['price_unit']} for i in items]
-        })
-    return jsonify({'jsonData': jsonData})
+@app.route('/search')
+def search():
+    query = request.args.get('query', '') # 搜尋的關鍵字
+    print("搜尋關鍵字:", query)
+    results = sta_compare.get_data(query)
+    print("回傳結果:", results)
+    return jsonify(results) 
